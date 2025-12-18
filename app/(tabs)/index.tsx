@@ -207,19 +207,71 @@ const COUNTRIES = [
   { code: 'ZW', name: 'Zimbabwe', flag: '🇿🇼' },
 ].sort((a, b) => a.name.localeCompare(b.name));
 
+// Sample cities/regions for countries (you can expand this)
+const CITIES: { [key: string]: string[] } = {
+  US: ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia', 'San Antonio', 'San Diego', 'Dallas', 'San Jose'],
+  GB: ['London', 'Manchester', 'Birmingham', 'Leeds', 'Glasgow', 'Liverpool', 'Edinburgh', 'Bristol', 'Newcastle', 'Sheffield'],
+  CA: ['Toronto', 'Montreal', 'Vancouver', 'Calgary', 'Edmonton', 'Ottawa', 'Winnipeg', 'Quebec City', 'Hamilton', 'Kitchener'],
+  AU: ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Gold Coast', 'Canberra', 'Newcastle', 'Wollongong', 'Hobart'],
+  IN: ['Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Ahmedabad', 'Chennai', 'Kolkata', 'Pune', 'Jaipur', 'Lucknow'],
+  NG: ['Lagos', 'Kano', 'Ibadan', 'Abuja', 'Port Harcourt', 'Benin City', 'Maiduguri', 'Zaria', 'Aba', 'Jos'],
+  KE: ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Thika', 'Malindi', 'Kitale', 'Garissa', 'Kakamega'],
+  GH: ['Accra', 'Kumasi', 'Tamale', 'Sekondi-Takoradi', 'Ashaiman', 'Sunyani', 'Cape Coast', 'Obuasi', 'Teshie', 'Tema'],
+  ZA: ['Johannesburg', 'Cape Town', 'Durban', 'Pretoria', 'Port Elizabeth', 'Bloemfontein', 'East London', 'Pietermaritzburg', 'Kimberley', 'Nelspruit'],
+  // Add more as needed
+};
+
 export default function HomeScreen() {
   const [selectedCountry, setSelectedCountry] = useState<typeof COUNTRIES[0] | null>(null);
   const [showCountryModal, setShowCountryModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Location modal states
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [locationCountry, setLocationCountry] = useState<typeof COUNTRIES[0] | null>(null);
+  const [locationCity, setLocationCity] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
 
   const filteredCountries = COUNTRIES.filter(country =>
     country.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const availableCities = locationCountry ? (CITIES[locationCountry.code] || ['City not available - Enter manually']) : [];
+
   const handleSelectCountry = (country: typeof COUNTRIES[0]) => {
     setSelectedCountry(country);
+    setLocationCountry(country); // Also set for location modal
     setShowCountryModal(false);
     setSearchQuery('');
+    // Reopen location modal if we came from there
+    if (selectedCategory) {
+      setTimeout(() => setShowLocationModal(true), 300);
+    }
+  };
+
+  const handleCategoryClick = (category: string) => {
+    setSelectedCategory(category);
+    setShowLocationModal(true);
+  };
+
+  const handleLocationCountrySelect = (country: typeof COUNTRIES[0]) => {
+    setLocationCountry(country);
+    setLocationCity(''); // Reset city when country changes
+  };
+
+  const handleFindSellers = () => {
+    if (locationCountry && locationCity) {
+      setShowLocationModal(false);
+      // Navigate to shop with location parameters
+      router.push({
+        pathname: '/(tabs)/shop',
+        params: { 
+          category: selectedCategory,
+          country: locationCountry.name,
+          city: locationCity 
+        }
+      });
+    }
   };
 
   return (
@@ -253,7 +305,7 @@ export default function HomeScreen() {
               <Star size={18} color={Colors.light.primary} strokeWidth={2.5} />
             </View>
             <View style={styles.locationTextContainer}>
-              <Text style={styles.locationLabel}>Delivery to</Text>
+              <Text style={styles.deliveryLabel}>Delivery to</Text>
               <Text style={styles.locationText}>
                 {selectedCountry ? `${selectedCountry.flag} ${selectedCountry.name}` : 'Select Country'}
               </Text>
@@ -310,7 +362,7 @@ export default function HomeScreen() {
           <View style={styles.categoryGrid}>
             <TouchableOpacity 
               style={styles.categoryCard} 
-              onPress={() => router.push('/(tabs)/shop')}
+              onPress={() => handleCategoryClick('groceries')}
               activeOpacity={0.9}
             >
               <View style={styles.categoryHeader}>
@@ -329,7 +381,11 @@ export default function HomeScreen() {
               </View>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.categoryCard} activeOpacity={0.9}>
+            <TouchableOpacity 
+              style={styles.categoryCard} 
+              onPress={() => handleCategoryClick('beverages')}
+              activeOpacity={0.9}
+            >
               <View style={styles.categoryHeader}>
                 <View style={[styles.categoryIconContainer, styles.categoryLiquor]}>
                   <Mail size={28} color="#fff" strokeWidth={2} />
@@ -338,15 +394,19 @@ export default function HomeScreen() {
                   <Text style={styles.categoryBadgeText}>Premium</Text>
                 </View>
               </View>
-              <Text style={styles.categoryTitle}>Beverages</Text>
-              <Text style={styles.categoryDesc}>Premium beers, wines, and spirits from trusted suppliers. Perfect for celebrating special moments.</Text>
+              <Text style={styles.categoryTitle}>Liquor</Text>
+              <Text style={styles.categoryDesc}>Premium liquor from trusted suppliers. Perfect for celebrating special moments.</Text>
               <View style={styles.categoryFooter}>
                 <Text style={styles.viewStoresText}>View Stores</Text>
                 <ChevronRight size={18} color={Colors.light.primary} strokeWidth={2.5} />
               </View>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.categoryCard} activeOpacity={0.9}>
+            <TouchableOpacity 
+              style={styles.categoryCard} 
+              onPress={() => handleCategoryClick('farming')}
+              activeOpacity={0.9}
+            >
               <View style={styles.categoryHeader}>
                 <View style={[styles.categoryIconContainer, styles.categoryFarming]}>
                   <Star size={28} color="#fff" strokeWidth={2} />
@@ -479,6 +539,101 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Location Selection Modal for Order */}
+      <Modal
+        visible={showLocationModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowLocationModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.locationModalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.locationModalTitle}>Location For This Order</Text>
+              <TouchableOpacity 
+                onPress={() => setShowLocationModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Text style={styles.modalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.locationModalContent}>
+                <Text style={styles.locationModalDesc}>
+                  Specify the country and city so we can show available sellers and services.
+                </Text>
+
+                {/* Country Selection */}
+                <Text style={styles.locationLabel}>Select Country</Text>
+                <TouchableOpacity 
+                  style={styles.locationDropdown}
+                  onPress={() => {
+                    setShowLocationModal(false);
+                    setTimeout(() => setShowCountryModal(true), 300);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={locationCountry ? styles.locationDropdownTextSelected : styles.locationDropdownText}>
+                    {locationCountry ? `${locationCountry.flag} ${locationCountry.name}` : 'Select A Country'}
+                  </Text>
+                  <ChevronRight size={20} color="#666" />
+                </TouchableOpacity>
+
+                {/* City Selection */}
+                {locationCountry && (
+                  <>
+                    <Text style={styles.locationLabel}>Select City / Region</Text>
+                    <TouchableOpacity 
+                      style={styles.locationDropdown}
+                      activeOpacity={1}
+                    >
+                      <TextInput
+                        style={styles.locationDropdownInput}
+                        placeholder="Select A City"
+                        placeholderTextColor="#999"
+                        value={locationCity}
+                        onChangeText={setLocationCity}
+                      />
+                    </TouchableOpacity>
+
+                    {availableCities.length > 0 && !locationCity && (
+                      <View style={styles.citySuggestions}>
+                        <Text style={styles.citySuggestionsTitle}>Popular cities:</Text>
+                        <View style={styles.cityChips}>
+                          {availableCities.slice(0, 6).map((city) => (
+                            <TouchableOpacity 
+                              key={city}
+                              style={styles.cityChip}
+                              onPress={() => setLocationCity(city)}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={styles.cityChipText}>{city}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+                  </>
+                )}
+
+                <TouchableOpacity 
+                  style={[
+                    styles.findSellersButton,
+                    (!locationCountry || !locationCity) && styles.findSellersButtonDisabled
+                  ]}
+                  onPress={handleFindSellers}
+                  disabled={!locationCountry || !locationCity}
+                  activeOpacity={0.9}
+                >
+                  <Text style={styles.findSellersButtonText}>Find Sellers</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -584,7 +739,7 @@ const styles = StyleSheet.create({
   locationTextContainer: {
     flex: 1,
   },
-  locationLabel: {
+  deliveryLabel: {
     fontSize: 11,
     color: '#666',
     fontWeight: '500',
@@ -1024,5 +1179,137 @@ const styles = StyleSheet.create({
     backgroundColor: '#e8f5e9',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  // Location Modal Styles
+  locationModalContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '75%',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  locationModalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: Colors.light.primary,
+    letterSpacing: -0.3,
+  },
+  locationModalContent: {
+    paddingHorizontal: 24,
+    paddingBottom: 32,
+  },
+  locationModalDesc: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 22,
+    marginBottom: 24,
+    marginTop: 8,
+  },
+  locationLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginBottom: 10,
+    marginTop: 16,
+  },
+  locationDropdown: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e8eaed',
+  },
+  locationDropdownText: {
+    fontSize: 15,
+    color: '#999',
+    fontWeight: '500',
+  },
+  locationDropdownTextSelected: {
+    fontSize: 15,
+    color: '#1a1a1a',
+    fontWeight: '600',
+  },
+  locationDropdownInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#1a1a1a',
+    fontWeight: '500',
+    padding: 0,
+  },
+  citySuggestions: {
+    marginTop: 16,
+  },
+  citySuggestionsTitle: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 12,
+    fontWeight: '500',
+  },
+  cityChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  cityChip: {
+    backgroundColor: '#f0f9f4',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#d0e8d8',
+  },
+  cityChipText: {
+    fontSize: 13,
+    color: Colors.light.primary,
+    fontWeight: '600',
+  },
+  findSellersButton: {
+    backgroundColor: Colors.light.primary,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 32,
+    ...Platform.select({
+      ios: {
+        shadowColor: Colors.light.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
+  },
+  findSellersButtonDisabled: {
+    backgroundColor: '#ccc',
+    ...Platform.select({
+      ios: {
+        shadowOpacity: 0,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
+  },
+  findSellersButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });
