@@ -1,11 +1,11 @@
-import { StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Platform, FlatList } from 'react-native';
+import { StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Platform, FlatList, Animated } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, ChevronRight, Star, ShoppingCart, Plus } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useCart } from '@/contexts/CartContext';
 
 // Sample products data
@@ -126,7 +126,10 @@ export default function ProviderDetailScreen() {
   const { id } = useLocalSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [addedProductName, setAddedProductName] = useState('');
   const { addToCart, getTotal, getItemCount } = useCart();
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const provider = PROVIDER_DATA[id as string] || PROVIDER_DATA['1'];
   const cartTotal = getTotal();
@@ -138,6 +141,30 @@ export default function ProviderDetailScreen() {
     return matchesSearch && matchesCategory;
   });
 
+  useEffect(() => {
+    if (showSuccessMessage) {
+      // Fade in
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+
+      // Auto hide after 2.5 seconds
+      const timer = setTimeout(() => {
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => {
+          setShowSuccessMessage(false);
+        });
+      }, 2500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessMessage]);
+
   const handleAddToCart = (product: typeof PRODUCTS[0]) => {
     addToCart({
       id: product.id,
@@ -147,6 +174,10 @@ export default function ProviderDetailScreen() {
       category: product.category,
       country: provider.location.split(',')[1]?.trim() || 'Zimbabwe',
     });
+    
+    // Show success message
+    setAddedProductName(product.name);
+    setShowSuccessMessage(true);
   };
 
   return (
@@ -310,6 +341,36 @@ export default function ProviderDetailScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Success Message */}
+      {showSuccessMessage && (
+        <Animated.View 
+          style={[
+            styles.successMessage,
+            {
+              opacity: fadeAnim,
+              transform: [{
+                translateY: fadeAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [20, 0],
+                }),
+              }],
+            },
+          ]}
+        >
+          <View style={styles.successMessageContent}>
+            <View style={styles.successIconContainer}>
+              <Text style={styles.successCheckmark}>✓</Text>
+            </View>
+            <View style={styles.successMessageText}>
+              <Text style={styles.successTitle}>Added to Cart!</Text>
+              <Text style={styles.successSubtitle} numberOfLines={1}>
+                {addedProductName}
+              </Text>
+            </View>
+          </View>
+        </Animated.View>
+      )}
     </SafeAreaView>
   );
 }
@@ -752,6 +813,59 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     letterSpacing: 0.3,
+  },
+  successMessage: {
+    position: 'absolute',
+    bottom: 100,
+    left: 20,
+    right: 20,
+    zIndex: 1000,
+  },
+  successMessageContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.light.primary,
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  successIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  successCheckmark: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  successMessageText: {
+    flex: 1,
+  },
+  successTitle: {
+    color: 'rgba(9, 241, 43, 0.9)',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  successSubtitle: {
+    color: 'rgba(9, 241, 43, 0.9)',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
 
