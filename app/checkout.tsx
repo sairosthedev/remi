@@ -2,7 +2,7 @@ import { StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform, Modal } 
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronRight, Plus, X, AlertCircle } from 'lucide-react-native';
+import { ChevronRight, Plus, X, AlertCircle, ArrowLeft } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useCart } from '@/contexts/CartContext';
 import { useState } from 'react';
@@ -90,17 +90,30 @@ export default function CheckoutScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header with Back Button */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <ArrowLeft size={24} color={Colors.light.primary} />
+            <Text style={styles.backButtonText}>Back to Cart</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Breadcrumb */}
         <View style={styles.breadcrumb}>
           <TouchableOpacity onPress={() => router.push('/(tabs)/shop')}>
             <Text style={styles.breadcrumbText}>Services</Text>
           </TouchableOpacity>
           <ChevronRight size={16} color="#00A859" style={{ marginHorizontal: 8 }} />
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/shop')}>
             <Text style={styles.breadcrumbText}>{category}</Text>
           </TouchableOpacity>
           <ChevronRight size={16} color="#00A859" style={{ marginHorizontal: 8 }} />
-          <Text style={styles.breadcrumbTextActive}>Create Order</Text>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/cart')}>
+            <Text style={styles.breadcrumbText}>Create Order</Text>
+          </TouchableOpacity>
           <ChevronRight size={16} color="#00A859" style={{ marginHorizontal: 8 }} />
           <Text style={styles.breadcrumbTextActive}>Checkout</Text>
         </View>
@@ -408,6 +421,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
+  },
+  header: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.light.primary,
   },
   breadcrumb: {
     flexDirection: 'row',
