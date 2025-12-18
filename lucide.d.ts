@@ -34,4 +34,6 @@ declare module 'lucide-react-native' {
   export const Heart: LucideIcon;
   export const Settings: LucideIcon;
   export const LogOut: LucideIcon;
+  export const Eye: LucideIcon;
+  export const EyeOff: LucideIcon;
 }

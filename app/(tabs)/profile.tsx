@@ -9,7 +9,7 @@ import { TouchableOpacity } from 'react-native';
 
 export default function ProfileScreen() {
     const handleLogout = () => {
-        router.replace('/(auth)/login');
+        router.replace('/(auth)/splash');
     };
 
     return (
