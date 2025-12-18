@@ -16,10 +16,10 @@ export default function ProfileScreen() {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>JD</Text>
+                    <Text style={styles.avatarText}>MS</Text>
                 </View>
-                <Text style={styles.name}>John Doe</Text>
-                <Text style={styles.email}>john.doe@example.com</Text>
+                <Text style={styles.name}>Macdonald Sairos</Text>
+                <Text style={styles.email}>macdonald.sairos@example.com</Text>
             </View>
 
             <View style={styles.menu}>
