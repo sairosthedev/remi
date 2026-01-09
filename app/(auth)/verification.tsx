@@ -3,33 +3,43 @@ import { StyleSheet, TouchableOpacity, TextInput, Keyboard, Alert } from 'react-
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 const PRIMARY_GREEN = '#00A859';
 
+import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/api/client';
+
 export default function VerificationScreen() {
-  const [codes, setCodes] = useState(['', '', '', '', '']);
+  const [codes, setCodes] = useState(['', '', '', '', '', '']);
+  const [isVerifying, setIsVerifying] = useState(false);
   const inputRefs = useRef<(TextInput | null)[]>([]);
+  const { verify, user } = useAuth();
 
-  const handleCodeChange = (index: number, value: string) => {
-    // Only allow numbers
-    if (value && !/^\d$/.test(value)) {
-      return;
-    }
-
-    const newCodes = [...codes];
-    newCodes[index] = value;
-    setCodes(newCodes);
-
-    // Auto-focus next input
-    if (value && index < 4) {
-      inputRefs.current[index + 1]?.focus();
-    }
-
-    // Auto-verify when all codes are filled
-    if (newCodes.every((code) => code !== '') && index === 4) {
+  // Auto-verify when all 6 codes are filled (watch codes array)
+  useEffect(() => {
+    const fullCode = codes.join('');
+    if (fullCode.length === 6 && !isVerifying) {
+      console.log('[Verification] All 6 digits detected, auto-verifying:', fullCode);
       handleVerify();
     }
+  }, [codes, isVerifying]);
+
+  const handleCodeChange = (index: number, value: string) => {
+    // Only allow single digits
+    const digit = value.replace(/\D/g, '').slice(0, 1);
+
+    const newCodes = [...codes];
+    newCodes[index] = digit;
+    setCodes(newCodes);
+
+    console.log('[Verification] After change at index', index, ':', newCodes);
+
+    // Auto-focus next input
+    if (digit && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+    // The useEffect will handle auto-verification when all 6 digits are present
   };
 
   const handleKeyPress = (index: number, key: string) => {
@@ -38,21 +48,49 @@ export default function VerificationScreen() {
     }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     const code = codes.join('');
-    if (code.length !== 5) {
-      Alert.alert('Invalid Code', 'Please enter the complete verification code');
+    console.log('[Verification] Attempt verify with codes array:', codes, 'joined:', code, 'length:', code.length);
+    if (code.length !== 6) {
+      Alert.alert('Invalid Code', `Please enter the complete verification code.\nCurrent: "${code}" (len=${code.length})`);
       return;
     }
 
-    // TODO: Verify code with backend
-    // For now, just navigate to tabs
-    router.replace('/(tabs)');
+    if (!user?.email) {
+       Alert.alert('Error', 'No email found for verification. Please register again.');
+       return;
+    }
+
+    setIsVerifying(true);
+    console.log('[Verification] Verifying:', { email: user.email, code });
+    try {
+      await verify(user.email, code);
+      try {
+        const me = await apiClient.getCurrentUser();
+        console.log('[Verification] Current user from /me:', me);
+      } catch (err) {
+        console.log('[Verification] Failed to fetch /me after verify', err);
+      }
+      // Clear codes to prevent useEffect from re-triggering
+      setCodes(['', '', '', '', '', '']);
+      Alert.alert('Success', 'Account verified successfully', [
+        { text: 'OK', onPress: () => router.replace('/(tabs)') }
+      ]);
+    } catch (error: any) {
+      Alert.alert('Verification Failed', error.message || 'Invalid code');
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
-  const handleResend = () => {
-    // TODO: Implement resend code logic
-    Alert.alert('Code Resent', 'A new verification code has been sent to your email');
+  const handleResend = async () => {
+    if (!user?.email) return;
+    try {
+      await apiClient.resendVerification(user.email);
+      Alert.alert('Code Resent', 'A new verification code has been sent to your email');
+    } catch (error: any) {
+       Alert.alert('Error', error.message || 'Failed to resend code');
+    }
   };
 
   return (
@@ -67,17 +105,19 @@ export default function VerificationScreen() {
 
         <View style={styles.codeContainer}>
           {codes.map((code, index) => (
-            <TextInput
-              key={index}
-              ref={(ref) => (inputRefs.current[index] = ref)}
-              style={[styles.codeInput, code && styles.codeInputFilled]}
-              value={code}
-              onChangeText={(value) => handleCodeChange(index, value)}
-              onKeyPress={({ nativeEvent }) => handleKeyPress(index, nativeEvent.key)}
-              keyboardType="number-pad"
-              maxLength={1}
-              selectTextOnFocus
-            />
+              <TextInput
+                key={index}
+                ref={(ref) => { inputRefs.current[index] = ref; }}
+                style={[styles.codeInput, code && styles.codeInputFilled]}
+                value={code}
+                onChangeText={(value) => handleCodeChange(index, value)}
+                onKeyPress={({ nativeEvent }) => handleKeyPress(index, nativeEvent.key)}
+                onSubmitEditing={() => { if (index === 5) handleVerify(); }}
+                keyboardType="number-pad"
+                maxLength={1}
+                blurOnSubmit={false}
+                textContentType="oneTimeCode"
+              />
           ))}
         </View>
 
@@ -125,7 +165,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 24,
-    gap: 12,
+    gap: 8,
   },
   codeInput: {
     flex: 1,
@@ -143,6 +183,17 @@ const styles = StyleSheet.create({
     borderColor: PRIMARY_GREEN,
     backgroundColor: '#fff',
   },
+  pasteInput: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+    backgroundColor: Colors.light.surface,
+    color: Colors.light.text,
+  },
+  
   resendContainer: {
     flexDirection: 'row',
     justifyContent: 'center',

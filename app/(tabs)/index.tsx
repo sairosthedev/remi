@@ -6,6 +6,7 @@ import { Search, Lock, ChevronRight, Star, ShoppingBag, Mail } from 'lucide-reac
 import { router } from 'expo-router';
 import { Images } from '@/constants/Images';
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Complete list of ALL 195+ countries in the world
 const COUNTRIES = [
@@ -222,6 +223,7 @@ const CITIES: { [key: string]: string[] } = {
 };
 
 export default function HomeScreen() {
+  const { user } = useAuth();
   const [selectedCountry, setSelectedCountry] = useState<typeof COUNTRIES[0] | null>(null);
   const [showCountryModal, setShowCountryModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -287,7 +289,10 @@ export default function HomeScreen() {
           >
             <View style={styles.avatarContainer}>
               <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarText}>MS</Text>
+                <Text style={styles.avatarText}>
+                  {user?.firstName?.[0]}
+                  {user?.lastName?.[0]}
+                </Text>
               </View>
               <View style={styles.activeIndicator} />
             </View>
@@ -325,29 +330,21 @@ export default function HomeScreen() {
 
         {/* Premium Hero Section with Gradient */}
         <View style={styles.heroSection}>
-          <LinearGradient
-            colors={['#00A859', '#008a47']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.heroGradient}
-          >
-            <View style={styles.heroContent}>
-              <View style={styles.heroTag}>
-                <Star size={14} color="#FFD700" fill="#FFD700" />
-                <Text style={styles.heroTagText}>Local stores. Global access</Text>
-              </View>
-              <Text style={styles.heroTitle}>Shop for Their{'\n'}Daily Needs</Text>
-              <Text style={styles.heroSubtitle}>Send essentials across borders with confidence. Simple, secure, and always reliable.</Text>
-              <TouchableOpacity 
-                style={styles.heroButton} 
-                onPress={() => router.push('/(tabs)/shop')}
-                activeOpacity={0.9}
-              >
-                <Text style={styles.heroButtonText}>Start Shopping</Text>
-                <ChevronRight size={20} color="#00A859" strokeWidth={2.5} />
-              </TouchableOpacity>
-            </View>
-          </LinearGradient>
+          <View style={styles.heroCard}>
+            <Text style={styles.heroEyebrow}>Welcome back{user ? `, ${user.firstName}` : ''}</Text>
+            <Text style={styles.heroTitle}>Send what matters{'\n'}in a few taps</Text>
+            <Text style={styles.heroSubtitle}>
+              Groceries, liquor and farming supplies from trusted local stores.
+            </Text>
+            <TouchableOpacity 
+              style={styles.heroButton} 
+              onPress={() => router.push('/(tabs)/shop')}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.heroButtonText}>Start shopping</Text>
+              <ChevronRight size={18} color="#fff" strokeWidth={2.5} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Premium Categories Section */}
@@ -457,28 +454,24 @@ export default function HomeScreen() {
 
         {/* Premium CTA Section */}
         <View style={styles.ctaBanner}>
-          <LinearGradient
-            colors={['#00A859', '#008a47']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.ctaGradient}
-          >
-            <View style={styles.ctaContent}>
-              <View style={styles.ctaBadge}>
-                <Star size={14} color="#FFD700" fill="#FFD700" />
-                <Text style={styles.ctaBadgeText}>Always Together</Text>
-              </View>
-              <Text style={styles.ctaTitle}>Bridge the Distance{'\n'}with Remipey</Text>
-              <Text style={styles.ctaDesc}>Support your loved ones with essentials delivered from trusted local providers across the globe</Text>
-              <TouchableOpacity 
-                style={styles.ctaButton}
-                activeOpacity={0.9}
-              >
-                <Text style={styles.ctaButtonText}>Open A Free Account</Text>
-                <ChevronRight size={20} color="#00A859" strokeWidth={2.5} />
-              </TouchableOpacity>
+          <View style={styles.ctaCard}>
+            <View style={styles.ctaBadge}>
+              <Star size={14} color={Colors.light.primary} />
+              <Text style={styles.ctaBadgeText}>Made for diaspora families</Text>
             </View>
-          </LinearGradient>
+            <Text style={styles.ctaTitle}>Bridge the distance{'\n'}with every order</Text>
+            <Text style={styles.ctaDesc}>
+              Support your people with real goods, not just cash transfers.
+            </Text>
+            <TouchableOpacity 
+              style={styles.ctaButton}
+              activeOpacity={0.9}
+              onPress={() => router.push('/(tabs)/shop')}
+            >
+              <Text style={styles.ctaButtonText}>Browse stores</Text>
+              <ChevronRight size={18} color="#fff" strokeWidth={2.5} />
+            </TouchableOpacity>
+          </View>
         </View>
 
       </ScrollView>
@@ -772,14 +765,33 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   heroSection: {
+    backgroundColor: '#f5f7fa',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  heroCard: {
     backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
-  heroGradient: {
-    paddingHorizontal: 28,
-    paddingVertical: 44,
-  },
-  heroContent: {
-    alignItems: 'flex-start',
+  heroEyebrow: {
+    fontSize: 12,
+    color: '#6b7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 6,
   },
   heroTag: {
     flexDirection: 'row',
@@ -798,25 +810,25 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   heroTitle: {
-    color: '#00A859',
-    fontSize: 32,
+    color: '#111827',
+    fontSize: 26,
     fontWeight: '800',
     marginBottom: 12,
     lineHeight: 40,
     letterSpacing: -0.5,
   },
   heroSubtitle: {
-    color: '#00A859',
+    color: '#4b5563',
     fontSize: 14,
-    marginBottom: 24,
+    marginBottom: 18,
     fontWeight: '400',
     lineHeight: 22,
   },
   heroButton: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 30,
+    backgroundColor: Colors.light.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 999,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -833,7 +845,10 @@ const styles = StyleSheet.create({
     }),
   },
   heroButtonText: {
-    color: Colors.light.primary,
+    color: '#ffffff',
+  heroImage: {
+    display: 'none',
+  },
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.3,
@@ -998,48 +1013,45 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   ctaBanner: {
-    marginTop: 20,
+    marginTop: 8,
     marginHorizontal: 20,
     marginBottom: 24,
+  },
+  ctaCard: {
+    backgroundColor: '#ffffff',
     borderRadius: 20,
-    overflow: 'hidden',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
       },
       android: {
-        elevation: 6,
+        elevation: 3,
       },
     }),
-  },
-  ctaGradient: {
-    paddingHorizontal: 24,
-    paddingVertical: 40,
-  },
-  ctaContent: {
-    alignItems: 'flex-start',
   },
   ctaBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(0, 168, 89, 0.1)',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
     marginBottom: 16,
   },
   ctaBadgeText: {
-    color: '#00A859',
+    color: Colors.light.primary,
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
   ctaTitle: {
-    color: '#00A859',
+    color: '#111827',
     fontSize: 28,
     fontWeight: '800',
     marginBottom: 12,
@@ -1047,14 +1059,14 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   ctaDesc: {
-    color: '#00A859',
+    color: '#4b5563',
     fontSize: 14,
     lineHeight: 22,
     marginBottom: 24,
     fontWeight: '400',
   },
   ctaButton: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.light.primary,
     paddingHorizontal: 28,
     paddingVertical: 16,
     borderRadius: 30,
@@ -1075,7 +1087,7 @@ const styles = StyleSheet.create({
     }),
   },
   ctaButtonText: {
-    color: Colors.light.primary,
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.3,

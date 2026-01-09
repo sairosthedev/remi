@@ -7,16 +7,34 @@ import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useState } from 'react';
 import { Images } from '@/constants/Images';
 
+import { useAuth } from '@/contexts/AuthContext';
+import { Alert } from 'react-native';
+
 const PRIMARY_GREEN = '#00A859';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { login } = useAuth();
 
-  const handleLogin = () => {
-    // Navigate to tabs after "login"
-    router.replace('/(tabs)');
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter email and password');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await login(email, password);
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      console.error(error);
+      Alert.alert('Login Failed', error.message || 'Invalid credentials');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -87,8 +105,14 @@ export default function LoginScreen() {
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.button} onPress={handleLogin}>
-            <Text style={styles.buttonText}>Login</Text>
+          <TouchableOpacity 
+            style={[styles.button, isSubmitting && styles.buttonDisabled]} 
+            onPress={handleLogin}
+            disabled={isSubmitting}
+          >
+            <Text style={styles.buttonText}>
+              {isSubmitting ? 'Logging in...' : 'Login'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -212,5 +236,8 @@ const styles = StyleSheet.create({
     color: PRIMARY_GREEN,
     fontSize: 16,
     fontWeight: '600',
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
 });

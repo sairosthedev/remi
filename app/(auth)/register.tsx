@@ -1,5 +1,5 @@
 import { Link, router } from 'expo-router';
-import { StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert, Platform } from 'react-native';
+import { StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert, Platform, ActivityIndicator } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,8 +8,12 @@ import { useState } from 'react';
 
 type Step = 1 | 2 | 3;
 
+import { useAuth } from '@/contexts/AuthContext';
+
 export default function RegisterScreen() {
   const [currentStep, setCurrentStep] = useState<Step>(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { register } = useAuth();
   
   // Step 1: Contact Details
   const [country, setCountry] = useState('Zimbabwe');
@@ -87,14 +91,30 @@ export default function RegisterScreen() {
     return true;
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep === 1 && validateStep1()) {
       setCurrentStep(2);
     } else if (currentStep === 2 && validateStep2()) {
       setCurrentStep(3);
     } else if (currentStep === 3 && validateStep3()) {
-      // Navigate to verification screen
-      router.push('/(auth)/verification');
+      // Register user
+      setIsSubmitting(true);
+      try {
+        await register({
+          email,
+          password,
+          firstName: name,
+          lastName: surname,
+          phone,
+        });
+        // Navigate to verification screen
+        router.push('/(auth)/verification');
+      } catch (error: any) {
+        console.error(error);
+        Alert.alert('Registration Failed', error.message || 'Failed to create account');
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -427,13 +447,20 @@ export default function RegisterScreen() {
                 </TouchableOpacity>
               )}
               <TouchableOpacity
-                style={[styles.nextButton, currentStep === 1 && styles.nextButtonFull]}
+                style={[styles.nextButton, currentStep === 1 && styles.nextButtonFull, isSubmitting && styles.nextButtonDisabled]}
                 onPress={handleNext}
+                disabled={isSubmitting}
               >
-                <Text style={styles.nextButtonText}>
-                  {currentStep === 3 ? 'Create Account' : 'Next'}
-                </Text>
-                {currentStep < 3 && <ArrowRight size={20} color="#fff" />}
+                {isSubmitting ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <Text style={styles.nextButtonText}>
+                      {currentStep === 3 ? 'Create Account' : 'Next'}
+                    </Text>
+                    {currentStep < 3 && <ArrowRight size={20} color="#fff" />}
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -739,5 +766,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     textDecorationLine: 'underline',
+  },
+  nextButtonDisabled: {
+    opacity: 0.7,
   },
 });

@@ -3,18 +3,29 @@ import { StyleSheet, View, Image, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import { Images } from '@/constants/Images';
+import { useAuth } from '@/contexts/AuthContext';
 
 const PRIMARY_GREEN = '#00A859';
 
 export default function SplashScreen() {
+  const { user, token, isLoading } = useAuth();
+
   useEffect(() => {
-    // Show splash for 6 seconds then navigate to login
+    // Wait until auth state has loaded from storage
+    if (isLoading) return;
+
     const timer = setTimeout(() => {
-      router.replace('/login');
-    }, 6000);
+      if (token && user) {
+        // User already authenticated → go straight to main app
+        router.replace('/(tabs)');
+      } else {
+        // Not authenticated → go to login
+        router.replace('/(auth)/login');
+      }
+    }, 1500); // shorter, snappier splash
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [isLoading, token, user]);
 
   return (
     <View style={styles.container}>
